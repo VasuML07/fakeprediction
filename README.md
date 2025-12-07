@@ -13,3 +13,4 @@ An NLP-powered machine learning solution to detect fraudulent job postings. This
 1. **Clone the repository:**
    ```bash
    git clone [https://github.com/VasuML07/fakeprediction.git](https://github.com/VasuML07/fakeprediction.git)
+# 🔴 Live Demo: [Click Here to Test the App](https://fakeprediction-xr6f3r7yxyy7bmbqraenj3.streamlit.app/)

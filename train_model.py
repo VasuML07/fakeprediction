@@ -64,4 +64,5 @@ with open("fake_job_model.pkl", "wb") as f:
 with open("tfidf_vectorizer.pkl", "wb") as f:
     pickle.dump(tfidf, f)
 
+
 print("Done! Files saved.")

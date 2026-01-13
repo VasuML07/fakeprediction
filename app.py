@@ -1,10 +1,17 @@
+#used for devoloping interactive web for ml focused applications
 import streamlit as st
+#used for saving and loading model
 import pickle
+#image module used for image specific functions
 from PIL import Image
 
 # --------------------------------------------------
 # Page Configuration
 # --------------------------------------------------
+
+#sets configuration for age
+#page_title is browser's tab tile
+#layout is used to keep content in which manner
 st.set_page_config(
     page_title="Fake Job Detector",
     page_icon="🕵️",
@@ -14,18 +21,24 @@ st.set_page_config(
 # --------------------------------------------------
 # Load Model & Vectorizer
 # --------------------------------------------------
+#this is used for heavy models,vectorizers and databases and loades once per session and doesn't rerun on each session
 @st.cache_resource
 def load_components():
+    #loads serialized ml model
     with open("fake_job_model.pkl", "rb") as f:
         model = pickle.load(f)
+    #loads our tf-idf vectorizer model
     with open("tfidf_vectorizer.pkl", "rb") as f:
         vectorizer = pickle.load(f)
     return model, vectorizer
 
+#ensures streamlit doesnt crash
 try:
     model, vectorizer = load_components()
+#throws and exception error on a crash
 except FileNotFoundError:
     st.error("Model files not found. Run `train_model.py` first.")
+    #stops the app from running
     st.stop()
 except Exception:
     st.error("Model files are corrupted. Retrain the model.")
@@ -34,7 +47,10 @@ except Exception:
 # --------------------------------------------------
 # Sidebar – Model Info
 # --------------------------------------------------
+
+#sets title for the sidebar
 st.sidebar.title("Model Information")
+#writes the content in the sidebar
 st.sidebar.write(
     """
     **Model:** NLP-based Fake Job Detector  
@@ -43,13 +59,17 @@ st.sidebar.write(
     """
 )
 
+#checkbocks is a type of button only runs when user asks for it
 if st.sidebar.checkbox("Show Confusion Matrix"):
     try:
         image = Image.open("confusion_matrix.png")
+        #keeps that specific image with caption 
         st.sidebar.image(image, caption="Confusion Matrix", use_column_width=True)
+    #handles error
     except FileNotFoundError:
         st.sidebar.warning("Confusion matrix not found. Train the model first.")
 
+#writes some content in sidebar
 st.sidebar.markdown(
     """
     **Metrics Explained**
@@ -67,17 +87,21 @@ st.markdown(
     "Detect whether a job posting is **Real** or **Fraudulent** using **NLP & Machine Learning**."
 )
 
+#this draws a horizontal line b/w sections
 st.divider()
 
 # --------------------------------------------------
 # Input Section
 # --------------------------------------------------
-st.subheader("Enter Job Details")
 
+#used for user actions and steps
+st.subheader("Enter Job Details")
+#used for collecting inputs from user
 job_title = st.text_input("Job Title")
 job_location = st.text_input("Location (optional)")
 job_description = st.text_area(
     "Job Description / Requirements",
+    #height = 200 is for 200 chars per line to avoid one line screening
     height=200
 )
 
@@ -87,10 +111,14 @@ input_text = f"{job_title} {job_location} {job_description}"
 # --------------------------------------------------
 # Prediction
 # --------------------------------------------------
+
+#creates a button
 if st.button("Analyze Job Posting", type="primary"):
+    #if both inputs aren't entered we rasise a warning
     if not job_title and not job_description:
         st.warning("Please enter at least a job title or description.")
     else:
+        #this fits out use input text into vectorizer to convert it to number
         transformed_text = vectorizer.transform([input_text])
         prediction = model.predict(transformed_text)[0]
         probabilities = model.predict_proba(transformed_text)[0]
@@ -108,3 +136,4 @@ if st.button("Analyze Job Posting", type="primary"):
             st.success("✅ REAL JOB POSTING")
             st.write(f"Confidence: **{probabilities[0] * 100:.2f}%**")
             st.balloons()
+

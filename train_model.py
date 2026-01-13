@@ -4,7 +4,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 import pickle
 
@@ -13,19 +13,27 @@ print("Loading dataset...")
 df = pd.read_csv("fake_job_postings.csv")
 
 # 2. PREPROCESSING
-# fillna replaces null values with empty strings
-df["text"] = df["title"].fillna('') + " " + df["location"].fillna('') + " " + df["description"].fillna('')
+df["text"] = (
+    df["title"].fillna('') + " " +
+    df["location"].fillna('') + " " +
+    df["description"].fillna('')
+)
+
 df = df.dropna(subset=["fraudulent"])
 df["fraudulent"] = df["fraudulent"].astype(int)
 
-# 3. VECTORIZATION
-print("Vectorizing text...")
-tfidf = TfidfVectorizer(max_features=5000, stop_words='english')
+# 3. VECTORIZATION (NLP STEP)
+print("Vectorizing text with TF-IDF...")
+tfidf = TfidfVectorizer(
+    max_features=5000,
+    stop_words="english",
+    ngram_range=(1, 2)  # improves NLP performance
+)
+
 X = tfidf.fit_transform(df["text"])
 y = df["fraudulent"]
 
-# 4. TRAIN/TEST SPLIT
-# Fixed typo: 'startify' -> 'stratify'
+# 4. TRAIN / TEST SPLIT
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -34,43 +42,40 @@ X_train, X_test, y_train, y_test = train_test_split(
     random_state=42
 )
 
-# 5. MODEL TRAINING
-print("Training Logistic Regression Model...")
-model = LogisticRegression(max_iter=1000)
+# 5. MODEL TRAINING (NLP CLASSIFIER)
+print("Training Naive Bayes NLP Model...")
+model = MultinomialNB()
 model.fit(X_train, y_train)
 
-# 6. MODEL EVALUATION METRICS (What you asked for)
+# 6. MODEL EVALUATION
 print("\n--- Model Evaluation Metrics ---")
 y_pred = model.predict(X_test)
 
-# Calculate specific metrics
 acc = accuracy_score(y_test, y_pred)
 print(f"Accuracy: {acc * 100:.2f}%")
 
-# Detailed Report (Precision, Recall, F1-Score)
 print("\nClassification Report:")
 print(classification_report(y_test, y_pred))
 
 # Confusion Matrix
 cm = confusion_matrix(y_test, y_pred)
 
-# Visualizing the Confusion Matrix
 plt.figure(figsize=(6, 4))
 sns.heatmap(
     cm,
     annot=True,
     fmt="d",
     cmap="Blues",
-    xticklabels=['Real', 'Fake'],
-    yticklabels=['Real', 'Fake']
+    xticklabels=["Real", "Fake"],
+    yticklabels=["Real", "Fake"]
 )
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.title("Confusion Matrix")
-plt.savefig("confusion_matrix.png")  # Save graph to display in Streamlit later
+plt.savefig("confusion_matrix.png")
 print("Confusion Matrix saved as image.")
 
-# 7. SAVE ARTIFACTS
+# 7. SAVE MODEL & VECTORIZER
 print("\nSaving model and vectorizer...")
 with open("fake_job_model.pkl", "wb") as f:
     pickle.dump(model, f)

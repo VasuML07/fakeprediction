@@ -41,7 +41,7 @@ except FileNotFoundError:
     #stops the app from running
     st.stop()
 except Exception as e:
-    st.error(f"Error loading model: {e}")
+    st.error(f"Error loading model: {e}. Try retraining the model with the updated packages.")
     st.stop()
 
 # --------------------------------------------------

@@ -1,137 +1,138 @@
+#used for devoloping interactive web for ml focused applications
 import streamlit as st
+#used for saving and loading model
 import pickle
-import numpy as np
+#image module used for image specific functions
 from PIL import Image
 
 # --------------------------------------------------
-# 1. Page Configuration
+# Page Configuration
 # --------------------------------------------------
+
+#sets configuration for age
+#page_title is browser's tab tile
+#layout is used to keep content in which manner
 st.set_page_config(
-    page_title="JobShield | Fake Job Detector",
-    page_icon="🛡️",
-    layout="wide"
+    page_title="Fake Job Detector",
+    page_icon="🕵️",
+    layout="centered"
 )
 
-# Custom CSS for styling
-st.markdown("""
-    <style>
-    .main {
-        background-color: #f5f7f9;
-    }
-    .stButton>button {
-        width: 100%;
-        border-radius: 5px;
-        height: 3em;
-        background-color: #ff4b4b;
-        color: white;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
 # --------------------------------------------------
-# 2. Load Model & Vectorizer (Cached)
+# Load Model & Vectorizer
 # --------------------------------------------------
+#this is used for heavy models,vectorizers and databases and loades once per session and doesn't rerun on each session
 @st.cache_resource
 def load_components():
+    #loads serialized ml model
+    with open("fake_job_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    #loads our tf-idf vectorizer model
+    with open("tfidf_vectorizer.pkl", "rb") as f:
+        vectorizer = pickle.load(f)
+    return model, vectorizer
+
+#ensures streamlit doesnt crash
+try:
+    model, vectorizer = load_components()
+#throws and exception error on a crash
+except FileNotFoundError:
+    st.error("Model files not found. Run `train_model.py` first.")
+    #stops the app from running
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.stop()
+
+# --------------------------------------------------
+# Sidebar – Model Info
+# --------------------------------------------------
+
+#sets title for the sidebar
+st.sidebar.title("Model Information")
+#writes the content in the sidebar
+st.sidebar.write(
+    """
+    **Model:** NLP-based Fake Job Detector  
+    **Technique:** TF-IDF + Naive Bayes  
+    **Purpose:** Identify fraudulent job postings
+    """
+)
+
+#checkbocks is a type of button only runs when user asks for it
+if st.sidebar.checkbox("Show Confusion Matrix"):
     try:
-        with open("fake_job_model.pkl", "rb") as f:
-            model = pickle.load(f)
-        with open("tfidf_vectorizer.pkl", "rb") as f:
-            vectorizer = pickle.load(f)
-        return model, vectorizer
+        image = Image.open("confusion_matrix.png")
+        #keeps that specific image with caption 
+        st.sidebar.image(image, caption="Confusion Matrix")
+    #handles error
     except FileNotFoundError:
-        return None, None
+        st.sidebar.warning("Confusion matrix not found. Train the model first.")
 
-model, vectorizer = load_components()
-
-# --------------------------------------------------
-# 3. Sidebar - Stats & Info
-# --------------------------------------------------
-with st.sidebar:
-    st.title("📊 Project Insights")
-    st.info("This system uses Natural Language Processing (NLP) to analyze linguistic patterns in job postings.")
-    
-    if st.checkbox("Show Performance Metrics"):
-        try:
-            image = Image.open("confusion_matrix.png")
-            st.image(image, caption="Model Confusion Matrix")
-        except:
-            st.warning("Confusion matrix image not found.")
-
-    st.markdown("---")
-    st.markdown("### How it works")
-    st.write("1. **TF-IDF**: Converts text to weighted numbers.")
-    st.write("2. **Naive Bayes**: Calculates probability of fraud based on word frequency.")
+#writes some content in sidebar
+st.sidebar.markdown(
+    """
+    **Metrics Explained**
+    - **Precision:** How many predicted fakes are actually fake
+    - **Recall:** How many real fakes were detected
+    - **F1-Score:** Balance between Precision & Recall
+    """
+)
 
 # --------------------------------------------------
-# 4. Main UI Layout
+# Main UI
 # --------------------------------------------------
 st.title("🕵️ Fake Job Posting Detector")
-st.write("Enter the details of a job posting below to check if it matches fraudulent patterns.")
+st.markdown(
+    "Detect whether a job posting is **Real** or **Fraudulent** using **NLP & Machine Learning**."
+)
 
-# Split the layout into two columns
-col1, col2 = st.columns([2, 1])
-
-with col1:
-    with st.form("prediction_form"):
-        st.subheader("📋 Job Details")
-        title = st.text_input("Job Title", placeholder="e.g. Data Entry Clerk")
-        location = st.text_input("Location", placeholder="e.g. London, UK")
-        description = st.text_area(
-            "Job Description & Requirements", 
-            placeholder="Paste the full job description here...",
-            height=250
-        )
-        
-        submit_button = st.form_submit_button("Analyze Posting")
+#this draws a horizontal line b/w sections
+st.divider()
 
 # --------------------------------------------------
-# 5. Prediction Logic
+# Input Section
 # --------------------------------------------------
-with col2:
-    st.subheader("🔍 Analysis Result")
-    
-    if submit_button:
-        if not title or not description:
-            st.error("Please fill in at least the Title and Description.")
-        elif model is None or vectorizer is None:
-            st.error("Model files missing! Please run the training script first.")
-        else:
-            # Prepare data (match training format)
-            input_data = f"{title} {location} {description}"
-            
-            # Transform and Predict
-            vec_input = vectorizer.transform([input_data])
-            prediction = model.predict(vec_input)[0]
-            probs = model.predict_proba(vec_input)[0]
-            
-            # Display Results
-            if prediction == 1:
-                st.error("### 🚨 HIGH RISK")
-                st.write(f"This posting shows strong indicators of being **Fraudulent**.")
-                
-                # Confidence Progress Bar
-                conf = probs[1]
-                st.write(f"Confidence Level: **{conf*100:.1f}%**")
-                st.progress(conf)
-                
-                st.warning("⚠️ **Advice:** Do not share personal bank details or pay any 'application fees'.")
-            else:
-                st.success("### ✅ LOW RISK")
-                st.write("This posting appears to be **Legitimate** based on our analysis.")
-                
-                # Confidence Progress Bar
-                conf = probs[0]
-                st.write(f"Confidence Level: **{conf*100:.1f}%**")
-                st.progress(conf)
-                
-                st.balloons()
 
+#used for user actions and steps
+st.subheader("Enter Job Details")
+#used for collecting inputs from user
+job_title = st.text_input("Job Title")
+job_location = st.text_input("Location (optional)")
+job_description = st.text_area(
+    "Job Description / Requirements",
+    #height = 200 is for 200 chars per line to avoid one line screening
+    height=200
+)
+
+# Combine input exactly like training
+input_text = f"{job_title} {job_location} {job_description}"
+
+# --------------------------------------------------
+# Prediction
+# --------------------------------------------------
+
+#creates a button
+if st.button("Analyze Job Posting", type="primary"):
+    #if both inputs aren't entered we rasise a warning
+    if not job_title and not job_description:
+        st.warning("Please enter at least a job title or description.")
     else:
-        st.info("Enter job details and click 'Analyze Posting' to see the result.")
+        #this fits out use input text into vectorizer to convert it to number
+        transformed_text = vectorizer.transform([input_text])
+        prediction = model.predict(transformed_text)[0]
+        probabilities = model.predict_proba(transformed_text)[0]
 
-# --------------------------------------------------
-# Footer
-# --------------------------------------------------
-st.markdown("---")
-st.caption("Disclaimer: This tool is for educational purposes and uses machine learning probabilities. Always do your own due diligence.")
+        st.divider()
+        st.subheader("Prediction Result")
+
+        if prediction == 1:
+            st.error("🚨 FRAUDULENT JOB POSTING DETECTED")
+            st.write(f"Confidence: **{probabilities[1] * 100:.2f}%**")
+            st.info(
+                "This posting contains linguistic patterns commonly seen in fake job ads. Proceed with caution."
+            )
+        else:
+            st.success("✅ REAL JOB POSTING")
+            st.write(f"Confidence: **{probabilities[0] * 100:.2f}%**")
+            st.balloons()

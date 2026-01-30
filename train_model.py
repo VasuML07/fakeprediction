@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 #used for splitting the data into training and testing data
 from sklearn.model_selection import train_test_split
-#this used to convert out input text into integer values so our computer can understqand and process it
+#this used to convert out input text into integer values so our computer can understand and process it
 from sklearn.feature_extraction.text import TfidfVectorizer
 #this multinomialNaive bayes algo preduicts based on proability of each frequency of words etc
 from sklearn.naive_bayes import MultinomialNB
@@ -103,3 +103,4 @@ with open("tfidf_vectorizer.pkl", "wb") as f:
     pickle.dump(tfidf, f)
 
 print("Done! Files saved.")
+

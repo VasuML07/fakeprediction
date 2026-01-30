@@ -22,6 +22,7 @@ st.set_page_config(
 # Load Model & Vectorizer
 # --------------------------------------------------
 #this is used for heavy models,vectorizers and databases and loades once per session and doesn't rerun on each session
+#this decorator is used for running function ones and storing input in cache
 @st.cache_resource
 def load_components():
     #loads serialized ml model
@@ -136,3 +137,4 @@ if st.button("Analyze Job Posting", type="primary"):
             st.success("✅ REAL JOB POSTING")
             st.write(f"Confidence: **{probabilities[0] * 100:.2f}%**")
             st.balloons()
+

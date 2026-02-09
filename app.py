@@ -4,11 +4,7 @@ import streamlit as st
 import pickle
 #image module used for image specific functions
 from PIL import Image
-
-# --------------------------------------------------
 # Page Configuration
-# --------------------------------------------------
-
 #sets configuration for age
 #page_title is browser's tab tile
 #layout is used to keep content in which manner
@@ -17,10 +13,7 @@ st.set_page_config(
     page_icon="🕵️",
     layout="centered"
 )
-
-# --------------------------------------------------
 # Load Model & Vectorizer
-# --------------------------------------------------
 #this is used for heavy models,vectorizers and databases and loades once per session and doesn't rerun on each session
 #this decorator is used for running function ones and storing input in cache
 @st.cache_resource
@@ -32,7 +25,6 @@ def load_components():
     with open("tfidf_vectorizer.pkl", "rb") as f:
         vectorizer = pickle.load(f)
     return model, vectorizer
-
 #ensures streamlit doesnt crash
 try:
     model, vectorizer = load_components()
@@ -44,11 +36,7 @@ except FileNotFoundError:
 except Exception as e:
     st.error(f"Error loading model: {e}. Try retraining the model with the updated packages.")
     st.stop()
-
-# --------------------------------------------------
 # Sidebar – Model Info
-# --------------------------------------------------
-
 #sets title for the sidebar
 st.sidebar.title("Model Information")
 #writes the content in the sidebar
@@ -59,7 +47,6 @@ st.sidebar.write(
     **Purpose:** Identify fraudulent job postings
     """
 )
-
 #checkbocks is a type of button only runs when user asks for it
 if st.sidebar.checkbox("Show Confusion Matrix"):
     try:
@@ -69,7 +56,6 @@ if st.sidebar.checkbox("Show Confusion Matrix"):
     #handles error
     except FileNotFoundError:
         st.sidebar.warning("Confusion matrix not found. Train the model first.")
-
 #writes some content in sidebar
 st.sidebar.markdown(
     """
@@ -79,22 +65,14 @@ st.sidebar.markdown(
     - **F1-Score:** Balance between Precision & Recall
     """
 )
-
-# --------------------------------------------------
 # Main UI
-# --------------------------------------------------
 st.title("🕵️ Fake Job Posting Detector")
 st.markdown(
     "Detect whether a job posting is **Real** or **Fraudulent** using **NLP & Machine Learning**."
 )
-
 #this draws a horizontal line b/w sections
 st.divider()
-
-# --------------------------------------------------
 # Input Section
-# --------------------------------------------------
-
 #used for user actions and steps
 st.subheader("Enter Job Details")
 #used for collecting inputs from user
@@ -105,14 +83,9 @@ job_description = st.text_area(
     #height = 200 is for 200 chars per line to avoid one line screening
     height=200
 )
-
 # Combine input exactly like training
 input_text = f"{job_title} {job_location} {job_description}"
-
-# --------------------------------------------------
 # Prediction
-# --------------------------------------------------
-
 #creates a button
 if st.button("Analyze Job Posting", type="primary"):
     #if both inputs aren't entered we rasise a warning
@@ -123,10 +96,8 @@ if st.button("Analyze Job Posting", type="primary"):
         transformed_text = vectorizer.transform([input_text])
         prediction = model.predict(transformed_text)[0]
         probabilities = model.predict_proba(transformed_text)[0]
-
         st.divider()
         st.subheader("Prediction Result")
-
         if prediction == 1:
             st.error("🚨 FRAUDULENT JOB POSTING DETECTED")
             st.write(f"Confidence: **{probabilities[1] * 100:.2f}%**")
@@ -137,3 +108,4 @@ if st.button("Analyze Job Posting", type="primary"):
             st.success("✅ REAL JOB POSTING")
             st.write(f"Confidence: **{probabilities[0] * 100:.2f}%**")
             st.balloons()
+

@@ -15,14 +15,12 @@ from scipy.sparse import hstack
 import pickle
 
 # =========================
-# LOAD DATASETS
+# LOAD DATA
 # =========================
 print("Loading datasets...")
 
-# Dataset 1: Fake Job Postings
 df_jobs = pd.read_csv("fake_job_postings.csv")
 
-# Dataset 2: Fake & Real News
 df_fake = pd.read_csv("Fake.csv")
 df_real = pd.read_csv("True.csv")
 
@@ -37,30 +35,26 @@ df_jobs["text"] = (
 
 df_jobs = df_jobs.dropna(subset=["fraudulent"])
 df_jobs["fraudulent"] = df_jobs["fraudulent"].astype(int)
-
 df_jobs = df_jobs[["text", "fraudulent"]]
 
 # =========================
 # PREPROCESS NEWS DATA
 # =========================
-# Combine title + text
 df_fake["text"] = df_fake["title"] + " " + df_fake["text"]
 df_real["text"] = df_real["title"] + " " + df_real["text"]
 
-# Assign labels
-df_fake["fraudulent"] = 1   # fake = fraudulent
-df_real["fraudulent"] = 0   # real = not fraudulent
+df_fake["fraudulent"] = 1
+df_real["fraudulent"] = 0
 
 df_news = pd.concat([df_fake, df_real], axis=0)
 df_news = df_news[["text", "fraudulent"]]
 
 # =========================
-# COMBINE DATASETS
+# BALANCE + COMBINE
 # =========================
-print("Combining datasets...")
-df = pd.concat([df_jobs, df_news], axis=0).reset_index(drop=True)
+df_news = df_news.sample(len(df_jobs), random_state=42)  # avoid dominance
 
-# Shuffle dataset
+df = pd.concat([df_jobs, df_news], axis=0).reset_index(drop=True)
 df = df.sample(frac=1, random_state=42).reset_index(drop=True)
 
 print(f"Total samples: {len(df)}")
@@ -72,7 +66,9 @@ print("Creating features...")
 
 suspicious_words = [
     "earn money", "quick money", "no experience",
-    "work from home", "easy job", "urgent hiring"
+    "work from home", "easy job", "urgent hiring",
+    "limited time", "apply now", "no interview",
+    "instant hiring", "free registration", "investment required"
 ]
 
 df["text_length"] = df["text"].apply(len)
@@ -92,7 +88,7 @@ df["caps_ratio"] = df["text"].apply(
 print("Vectorizing text...")
 
 tfidf = TfidfVectorizer(
-    max_features=8000,   # increased due to larger dataset
+    max_features=6000,
     stop_words="english",
     ngram_range=(1, 2)
 )
@@ -110,7 +106,7 @@ X = hstack([X_text, extra_features])
 y = df["fraudulent"]
 
 # =========================
-# TRAIN TEST SPLIT
+# SPLIT
 # =========================
 X_train, X_test, y_train, y_test = train_test_split(
     X, y,
@@ -120,11 +116,11 @@ X_train, X_test, y_train, y_test = train_test_split(
 )
 
 # =========================
-# MODEL TRAINING
+# MODEL
 # =========================
 print("Training model...")
 
-model = LinearSVC(class_weight="balanced")  # important for imbalance
+model = LinearSVC(class_weight={0:1, 1:2})  # bias toward catching fake
 model.fit(X_train, y_train)
 
 # =========================
@@ -134,37 +130,25 @@ print("\n--- Evaluation ---")
 
 y_pred = model.predict(X_test)
 
-acc = accuracy_score(y_test, y_pred)
-print(f"Accuracy: {acc * 100:.2f}%")
-
-print("\nClassification Report:")
+print(f"Accuracy: {accuracy_score(y_test, y_pred)*100:.2f}%")
 print(classification_report(y_test, y_pred))
 
-# Confusion Matrix
 cm = confusion_matrix(y_test, y_pred)
 
 plt.figure(figsize=(6, 4))
 sns.heatmap(
-    cm,
-    annot=True,
-    fmt="d",
-    cmap="Blues",
+    cm, annot=True, fmt="d", cmap="Blues",
     xticklabels=["Real", "Fake"],
     yticklabels=["Real", "Fake"]
 )
-
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.title("Confusion Matrix")
 plt.savefig("confusion_matrix.png")
 
-print("Confusion matrix saved.")
-
 # =========================
 # SAVE
 # =========================
-print("Saving model...")
-
 with open("fake_job_model.pkl", "wb") as f:
     pickle.dump(model, f)
 

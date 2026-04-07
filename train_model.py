@@ -10,8 +10,7 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 #this used to convert out input text into integer values so our computer can understand and process it
 from sklearn.feature_extraction.text import TfidfVectorizer
-#this multinomialNaive bayes algo preduicts based on proability of each frequency of words etc
-from sklearn.naive_bayes import MultinomialNB
+from sklearn.svm import LinearSVC
 #used for model evaluation and insights
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 #used to save the model
@@ -61,7 +60,7 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 # 5. MODEL TRAINING (NLP CLASSIFIER)
 print("Training Naive Bayes NLP Model...")
-model = MultinomialNB()
+model = LinearSVC()
 #fitting the model
 model.fit(X_train, y_train)
 

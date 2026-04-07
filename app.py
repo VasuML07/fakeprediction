@@ -1,150 +1,59 @@
-# =========================
-# IMPORTS
-# =========================
 import streamlit as st
 import pickle
 import numpy as np
 from PIL import Image
 from scipy.sparse import hstack, csr_matrix
 
-# =========================
-# CONFIG
-# =========================
-st.set_page_config(
-    page_title="Fake Detection System",
-    page_icon="🕵️",
-    layout="centered"
-)
+st.set_page_config(page_title="Fake Detector", page_icon="🕵️")
 
-# =========================
-# LOAD MODEL
-# =========================
 @st.cache_resource
-def load_components():
+def load():
     with open("fake_job_model.pkl", "rb") as f:
         model = pickle.load(f)
-
     with open("tfidf_vectorizer.pkl", "rb") as f:
-        vectorizer = pickle.load(f)
+        vec = pickle.load(f)
+    return model, vec
 
-    return model, vectorizer
+model, vectorizer = load()
 
-try:
-    model, vectorizer = load_components()
-except FileNotFoundError:
-    st.error("Model files not found. Run train_model.py first.")
-    st.stop()
-except Exception as e:
-    st.error(f"Error loading model: {e}")
-    st.stop()
-
-# =========================
-# SIDEBAR
-# =========================
-st.sidebar.title("Model Info")
-st.sidebar.write("""
-**Model:** Linear SVM  
-**Technique:** TF-IDF + Feature Engineering  
-**Data:** Job postings + News dataset  
-""")
-
-if st.sidebar.checkbox("Show Confusion Matrix"):
-    try:
-        image = Image.open("confusion_matrix.png")
-        st.sidebar.image(image, caption="Confusion Matrix")
-    except FileNotFoundError:
-        st.sidebar.warning("Confusion matrix not found. Train the model first.")
-
-st.sidebar.markdown("""
-**Metrics Explanation**
-- Precision → Correct fake predictions  
-- Recall → Fake detection coverage  
-- F1-score → Balance of both  
-""")
-
-# =========================
-# MAIN UI
-# =========================
 st.title("🕵️ Fake Content Detector")
-st.markdown(
-    "Detect whether a **job posting or text content** is **Real or Fraudulent** using Machine Learning."
-)
 
-st.divider()
+title = st.text_input("Title")
+location = st.text_input("Location")
+desc = st.text_area("Description", height=200)
 
-# =========================
-# INPUT SECTION
-# =========================
-st.subheader("Enter Details")
+text = f"{title} {location} {desc}"
 
-job_title = st.text_input("Title (Job / News)")
-job_location = st.text_input("Location (optional)")
-job_description = st.text_area(
-    "Description / Content",
-    height=200
-)
-
-input_text = f"{job_title} {job_location} {job_description}"
-
-# =========================
-# FEATURE ENGINEERING
-# =========================
-def extract_features(text):
+def features(t):
     suspicious_words = [
         "earn money", "quick money", "no experience",
-        "work from home", "easy job", "urgent hiring"
+        "work from home", "easy job", "urgent hiring",
+        "limited time", "apply now", "no interview",
+        "instant hiring", "free registration", "investment required"
     ]
 
-    text_length = len(text)
-    word_count = len(text.split())
+    return np.array([
+        len(t),
+        len(t.split()),
+        sum(w in t.lower() for w in suspicious_words),
+        sum(1 for c in t if c.isupper()) / (len(t)+1)
+    ]).reshape(1, -1)
 
-    suspicious_score = sum(word in text.lower() for word in suspicious_words)
-
-    caps_ratio = sum(1 for c in text if c.isupper()) / (len(text) + 1)
-
-    return np.array([text_length, word_count, suspicious_score, caps_ratio]).reshape(1, -1)
-
-# =========================
-# PREDICTION
-# =========================
-if st.button("Analyze", type="primary"):
-
-    if not job_title and not job_description:
-        st.warning("Please enter at least a title or description.")
+if st.button("Analyze"):
+    if not title and not desc:
+        st.warning("Enter input")
     else:
-        try:
-            # TF-IDF
-            X_text = vectorizer.transform([input_text])
+        X_text = vectorizer.transform([text])
+        X_extra = features(text)
 
-            # Extra features
-            extra_features = extract_features(input_text)
+        X = hstack([X_text, csr_matrix(X_extra)])
 
-            # Combine safely
-            X_final = hstack([X_text, csr_matrix(extra_features)])
+        pred = model.predict(X)[0]
+        score = abs(model.decision_function(X)[0])
 
-            # Prediction
-            prediction = model.predict(X_final)[0]
+        if pred == 1:
+            st.error("🚨 FAKE")
+        else:
+            st.success("✅ REAL")
 
-            # Confidence (distance from boundary)
-            decision = model.decision_function(X_final)[0]
-            confidence = abs(decision)
-
-            # =========================
-            # OUTPUT
-            # =========================
-            st.divider()
-            st.subheader("Result")
-
-            if prediction == 1:
-                st.error("🚨 FRAUDULENT / FAKE CONTENT DETECTED")
-                st.info(
-                    "This content shows patterns commonly associated with scams or misleading information."
-                )
-            else:
-                st.success("✅ REAL / LEGIT CONTENT")
-                st.balloons()
-
-            st.write(f"Confidence Score: **{confidence:.2f}**")
-
-        except Exception as e:
-            st.error(f"Prediction failed: {e}")
+        st.write(f"Confidence: {score:.2f}")

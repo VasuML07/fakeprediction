@@ -11,7 +11,7 @@ from scipy.sparse import hstack, csr_matrix
 # CONFIG
 # =========================
 st.set_page_config(
-    page_title="Fake Job Detector",
+    page_title="Fake Detection System",
     page_icon="🕵️",
     layout="centered"
 )
@@ -45,7 +45,7 @@ st.sidebar.title("Model Info")
 st.sidebar.write("""
 **Model:** Linear SVM  
 **Technique:** TF-IDF + Feature Engineering  
-**Goal:** Detect fake job postings
+**Data:** Job postings + News dataset  
 """)
 
 if st.sidebar.checkbox("Show Confusion Matrix"):
@@ -53,34 +53,34 @@ if st.sidebar.checkbox("Show Confusion Matrix"):
         image = Image.open("confusion_matrix.png")
         st.sidebar.image(image, caption="Confusion Matrix")
     except FileNotFoundError:
-        st.sidebar.warning("Confusion matrix not found. Train model first.")
+        st.sidebar.warning("Confusion matrix not found. Train the model first.")
 
 st.sidebar.markdown("""
-**Metrics**
-- Precision → correctness of fake predictions  
-- Recall → how many fakes detected  
-- F1-score → balance of both  
+**Metrics Explanation**
+- Precision → Correct fake predictions  
+- Recall → Fake detection coverage  
+- F1-score → Balance of both  
 """)
 
 # =========================
 # MAIN UI
 # =========================
-st.title("🕵️ Fake Job Posting Detector")
+st.title("🕵️ Fake Content Detector")
 st.markdown(
-    "Analyze job listings and detect whether they are **Real** or **Fraudulent** using Machine Learning."
+    "Detect whether a **job posting or text content** is **Real or Fraudulent** using Machine Learning."
 )
 
 st.divider()
 
 # =========================
-# INPUT
+# INPUT SECTION
 # =========================
-st.subheader("Enter Job Details")
+st.subheader("Enter Details")
 
-job_title = st.text_input("Job Title")
+job_title = st.text_input("Title (Job / News)")
 job_location = st.text_input("Location (optional)")
 job_description = st.text_area(
-    "Job Description / Requirements",
+    "Description / Content",
     height=200
 )
 
@@ -107,38 +107,41 @@ def extract_features(text):
 # =========================
 # PREDICTION
 # =========================
-if st.button("Analyze Job Posting", type="primary"):
+if st.button("Analyze", type="primary"):
 
     if not job_title and not job_description:
-        st.warning("Please enter at least a job title or description.")
+        st.warning("Please enter at least a title or description.")
     else:
         try:
-            # TF-IDF transform
+            # TF-IDF
             X_text = vectorizer.transform([input_text])
 
             # Extra features
             extra_features = extract_features(input_text)
 
-            # Combine properly (NO SHAPE BUG)
+            # Combine safely
             X_final = hstack([X_text, csr_matrix(extra_features)])
 
             # Prediction
             prediction = model.predict(X_final)[0]
 
-            # Confidence (distance from decision boundary)
+            # Confidence (distance from boundary)
             decision = model.decision_function(X_final)[0]
             confidence = abs(decision)
 
+            # =========================
+            # OUTPUT
+            # =========================
             st.divider()
-            st.subheader("Prediction Result")
+            st.subheader("Result")
 
             if prediction == 1:
-                st.error("🚨 FRAUDULENT JOB POSTING DETECTED")
+                st.error("🚨 FRAUDULENT / FAKE CONTENT DETECTED")
                 st.info(
-                    "This posting shows patterns commonly seen in fake job listings. Proceed carefully."
+                    "This content shows patterns commonly associated with scams or misleading information."
                 )
             else:
-                st.success("✅ REAL JOB POSTING")
+                st.success("✅ REAL / LEGIT CONTENT")
                 st.balloons()
 
             st.write(f"Confidence Score: **{confidence:.2f}**")

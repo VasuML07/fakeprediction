@@ -15,27 +15,60 @@ from scipy.sparse import hstack
 import pickle
 
 # =========================
-# LOAD DATA
+# LOAD DATASETS
 # =========================
-print("Loading dataset...")
-df = pd.read_csv("fake_job_postings.csv")
+print("Loading datasets...")
+
+# Dataset 1: Fake Job Postings
+df_jobs = pd.read_csv("fake_job_postings.csv")
+
+# Dataset 2: Fake & Real News
+df_fake = pd.read_csv("Fake.csv")
+df_real = pd.read_csv("True.csv")
 
 # =========================
-# PREPROCESSING
+# PREPROCESS JOB DATA
 # =========================
-df["text"] = (
-    df["title"].fillna('') + " " +
-    df["location"].fillna('') + " " +
-    df["description"].fillna('')
+df_jobs["text"] = (
+    df_jobs["title"].fillna('') + " " +
+    df_jobs["location"].fillna('') + " " +
+    df_jobs["description"].fillna('')
 )
 
-df = df.dropna(subset=["fraudulent"])
-df["fraudulent"] = df["fraudulent"].astype(int)
+df_jobs = df_jobs.dropna(subset=["fraudulent"])
+df_jobs["fraudulent"] = df_jobs["fraudulent"].astype(int)
+
+df_jobs = df_jobs[["text", "fraudulent"]]
+
+# =========================
+# PREPROCESS NEWS DATA
+# =========================
+# Combine title + text
+df_fake["text"] = df_fake["title"] + " " + df_fake["text"]
+df_real["text"] = df_real["title"] + " " + df_real["text"]
+
+# Assign labels
+df_fake["fraudulent"] = 1   # fake = fraudulent
+df_real["fraudulent"] = 0   # real = not fraudulent
+
+df_news = pd.concat([df_fake, df_real], axis=0)
+df_news = df_news[["text", "fraudulent"]]
+
+# =========================
+# COMBINE DATASETS
+# =========================
+print("Combining datasets...")
+df = pd.concat([df_jobs, df_news], axis=0).reset_index(drop=True)
+
+# Shuffle dataset
+df = df.sample(frac=1, random_state=42).reset_index(drop=True)
+
+print(f"Total samples: {len(df)}")
 
 # =========================
 # FEATURE ENGINEERING
 # =========================
-print("Creating additional features...")
+print("Creating features...")
 
 suspicious_words = [
     "earn money", "quick money", "no experience",
@@ -57,8 +90,9 @@ df["caps_ratio"] = df["text"].apply(
 # TF-IDF
 # =========================
 print("Vectorizing text...")
+
 tfidf = TfidfVectorizer(
-    max_features=5000,
+    max_features=8000,   # increased due to larger dataset
     stop_words="english",
     ngram_range=(1, 2)
 )
@@ -88,14 +122,16 @@ X_train, X_test, y_train, y_test = train_test_split(
 # =========================
 # MODEL TRAINING
 # =========================
-print("Training Linear SVM model...")
-model = LinearSVC()
+print("Training model...")
+
+model = LinearSVC(class_weight="balanced")  # important for imbalance
 model.fit(X_train, y_train)
 
 # =========================
 # EVALUATION
 # =========================
-print("\n--- Model Evaluation ---")
+print("\n--- Evaluation ---")
+
 y_pred = model.predict(X_test)
 
 acc = accuracy_score(y_test, y_pred)
@@ -116,6 +152,7 @@ sns.heatmap(
     xticklabels=["Real", "Fake"],
     yticklabels=["Real", "Fake"]
 )
+
 plt.xlabel("Predicted")
 plt.ylabel("Actual")
 plt.title("Confusion Matrix")
@@ -124,9 +161,9 @@ plt.savefig("confusion_matrix.png")
 print("Confusion matrix saved.")
 
 # =========================
-# SAVE FILES
+# SAVE
 # =========================
-print("Saving model and vectorizer...")
+print("Saving model...")
 
 with open("fake_job_model.pkl", "wb") as f:
     pickle.dump(model, f)

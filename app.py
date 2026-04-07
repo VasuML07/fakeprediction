@@ -1,7 +1,11 @@
+# =========================
+# IMPORTS
+# =========================
 import streamlit as st
 import pickle
+import numpy as np
 from PIL import Image
-from scipy.sparse import hstack
+from scipy.sparse import hstack, csr_matrix
 
 # =========================
 # CONFIG
@@ -27,8 +31,11 @@ def load_components():
 
 try:
     model, vectorizer = load_components()
-except:
+except FileNotFoundError:
     st.error("Model files not found. Run train_model.py first.")
+    st.stop()
+except Exception as e:
+    st.error(f"Error loading model: {e}")
     st.stop()
 
 # =========================
@@ -38,31 +45,49 @@ st.sidebar.title("Model Info")
 st.sidebar.write("""
 **Model:** Linear SVM  
 **Technique:** TF-IDF + Feature Engineering  
+**Goal:** Detect fake job postings
 """)
 
 if st.sidebar.checkbox("Show Confusion Matrix"):
     try:
         image = Image.open("confusion_matrix.png")
-        st.sidebar.image(image)
-    except:
-        st.sidebar.warning("Train model first")
+        st.sidebar.image(image, caption="Confusion Matrix")
+    except FileNotFoundError:
+        st.sidebar.warning("Confusion matrix not found. Train model first.")
+
+st.sidebar.markdown("""
+**Metrics**
+- Precision → correctness of fake predictions  
+- Recall → how many fakes detected  
+- F1-score → balance of both  
+""")
 
 # =========================
 # MAIN UI
 # =========================
-st.title("🕵️ Fake Job Detector")
-st.write("Detect fraudulent job postings using ML")
+st.title("🕵️ Fake Job Posting Detector")
+st.markdown(
+    "Analyze job listings and detect whether they are **Real** or **Fraudulent** using Machine Learning."
+)
 
 st.divider()
 
+# =========================
+# INPUT
+# =========================
+st.subheader("Enter Job Details")
+
 job_title = st.text_input("Job Title")
-job_location = st.text_input("Location")
-job_description = st.text_area("Job Description", height=200)
+job_location = st.text_input("Location (optional)")
+job_description = st.text_area(
+    "Job Description / Requirements",
+    height=200
+)
 
 input_text = f"{job_title} {job_location} {job_description}"
 
 # =========================
-# FEATURE ENGINEERING (SAME AS TRAINING)
+# FEATURE ENGINEERING
 # =========================
 def extract_features(text):
     suspicious_words = [
@@ -77,32 +102,46 @@ def extract_features(text):
 
     caps_ratio = sum(1 for c in text if c.isupper()) / (len(text) + 1)
 
-    return [text_length, word_count, suspicious_score, caps_ratio]
+    return np.array([text_length, word_count, suspicious_score, caps_ratio]).reshape(1, -1)
 
 # =========================
 # PREDICTION
 # =========================
-if st.button("Analyze", type="primary"):
+if st.button("Analyze Job Posting", type="primary"):
 
     if not job_title and not job_description:
-        st.warning("Enter job details")
+        st.warning("Please enter at least a job title or description.")
     else:
-        X_text = vectorizer.transform([input_text])
-        extra = extract_features(input_text)
+        try:
+            # TF-IDF transform
+            X_text = vectorizer.transform([input_text])
 
-        X_final = hstack([X_text, [extra]])
+            # Extra features
+            extra_features = extract_features(input_text)
 
-        prediction = model.predict(X_final)[0]
-        decision = model.decision_function(X_final)[0]
+            # Combine properly (NO SHAPE BUG)
+            X_final = hstack([X_text, csr_matrix(extra_features)])
 
-        confidence = abs(decision)
+            # Prediction
+            prediction = model.predict(X_final)[0]
 
-        st.divider()
-        st.subheader("Result")
+            # Confidence (distance from decision boundary)
+            decision = model.decision_function(X_final)[0]
+            confidence = abs(decision)
 
-        if prediction == 1:
-            st.error("🚨 FAKE JOB DETECTED")
-        else:
-            st.success("✅ REAL JOB")
+            st.divider()
+            st.subheader("Prediction Result")
 
-        st.write(f"Confidence Score: {confidence:.2f}")
+            if prediction == 1:
+                st.error("🚨 FRAUDULENT JOB POSTING DETECTED")
+                st.info(
+                    "This posting shows patterns commonly seen in fake job listings. Proceed carefully."
+                )
+            else:
+                st.success("✅ REAL JOB POSTING")
+                st.balloons()
+
+            st.write(f"Confidence Score: **{confidence:.2f}**")
+
+        except Exception as e:
+            st.error(f"Prediction failed: {e}")

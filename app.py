@@ -73,7 +73,7 @@ model, vectorizer = load()
 # =========================
 # HEADER
 # =========================
-st.markdown("# 🕵️ Fake Content Detector")
+st.markdown("# 🕵️ Fake Job Detector")
 
 st.markdown("")
 

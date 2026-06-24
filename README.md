@@ -1,4 +1,3 @@
-````markdown
 <div align="center">
 
 # 🕵️ Fake Job Prediction System
@@ -12,14 +11,26 @@ Built with <strong>TF-IDF</strong>, <strong>Scikit-Learn</strong>, and <strong>S
 
 <p>
 
-![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Scikit-Learn](https://img.shields.io/badge/Scikit--Learn-ML-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white)
-![TF-IDF](https://img.shields.io/badge/NLP-TF--IDF-blue?style=for-the-badge)
-![Streamlit](https://img.shields.io/badge/Deployment-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
-![Status](https://img.shields.io/badge/Status-Live-success?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+<img src="https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+<img src="https://img.shields.io/badge/Scikit--Learn-ML-F7931E?style=for-the-badge&logo=scikitlearn&logoColor=white" />
+<img src="https://img.shields.io/badge/NLP-TF--IDF-blue?style=for-the-badge" />
+<img src="https://img.shields.io/badge/Deployment-Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" />
+<img src="https://img.shields.io/badge/Status-Live-success?style=for-the-badge" />
+<img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" />
 
 </p>
+
+### 🌐 Live Application
+
+**https://fakeprediction-a8wpvpp3uifhwxeduehaev.streamlit.app/**
+
+<br>
+
+> **Helping job seekers identify scam job postings before they become victims.**
+
+</div>
+
+---
 
 ### 🌐 Live Application
 

@@ -13,11 +13,7 @@ Built with **TF-IDF**, **Scikit-Learn**, and **Streamlit** for fast, real-time p
 ![Status](https://img.shields.io/badge/Status-Live-success?style=for-the-badge)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-**🚀 Live Demo:** https://fakeprediction-a8wpvpp3uifhwxeduehaev.streamlit.app/
 
-> Helping job seekers identify scam job postings before they become victims.
-
----
 
 # 📖 Overview
 
